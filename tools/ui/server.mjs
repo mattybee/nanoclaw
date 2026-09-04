@@ -9,6 +9,9 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const NCL = path.join(ROOT, 'bin', 'ncl');
 const PORT = Number(process.env.NANOCLAW_UI_PORT || 7799);
+// 127.0.0.1 by default (admin plane). In Compose set NANOCLAW_UI_HOST=0.0.0.0
+// and publish the port only on the VPS loopback (127.0.0.1:7799:7799).
+const HOST = process.env.NANOCLAW_UI_HOST || '127.0.0.1';
 
 function ncl(args) {
   return new Promise((resolve) => {
@@ -799,7 +802,7 @@ const portFree = () => new Promise((resolve) => {
   const probe = http.createServer();
   probe.once('error', () => resolve(false));
   probe.once('listening', () => probe.close(() => resolve(true)));
-  probe.listen(PORT, '127.0.0.1');
+  probe.listen(PORT, HOST);
 });
 
 server.on('error', async (err) => {
@@ -817,10 +820,10 @@ server.on('error', async (err) => {
     if (await portFree()) break;
     if (i === 12) { try { process.kill(other.pid, 'SIGKILL'); } catch {} }
   }
-  server.listen(PORT, '127.0.0.1');
+  server.listen(PORT, HOST);
 });
 
 for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 1500); });
 
-server.listen(PORT, '127.0.0.1');
-server.on('listening', () => console.log(`NanoClaw UI → http://127.0.0.1:${PORT}`));
+server.listen(PORT, HOST);
+server.on('listening', () => console.log(`NanoClaw UI → http://${HOST}:${PORT}`));

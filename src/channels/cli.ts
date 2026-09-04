@@ -49,7 +49,7 @@ import type {
   InboundEvent,
   OutboundMessage,
 } from './adapter.js';
-import { INSTANCE_KEY_RE, registerChannelAdapter } from './channel-registry.js';
+import { INSTANCE_KEY_RE, registerAdapterAlias, registerChannelAdapter } from './channel-registry.js';
 
 const PLATFORM_ID = 'local';
 
@@ -109,6 +109,27 @@ function createAdapter(): ChannelAdapter {
           resolve();
         });
       });
+
+      // Register the adapter under any non-default CLI instance names that
+      // already exist in the messaging groups table. This lets named CLI
+      // instances (e.g. orchestrator) find the running CLI adapter for
+      // outbound delivery without needing a separate adapter per instance.
+      try {
+        const { getDb } = await import('../db/connection.js');
+        const db = getDb();
+        if (db) {
+          const rows = await db.all<{ instance: string }>(
+            `SELECT DISTINCT instance FROM messaging_groups
+             WHERE channel_type = 'cli' AND instance IS NOT NULL AND instance != 'cli'`,
+          );
+          for (const row of rows) {
+            registerAdapterAlias(row.instance, adapter);
+            log.info('CLI adapter registered under alias', { instance: row.instance });
+          }
+        }
+      } catch (err) {
+        log.warn('Failed to register CLI adapter aliases (continuing)', { err });
+      }
     },
 
     async teardown(): Promise<void> {

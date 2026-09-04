@@ -30,6 +30,18 @@ export function registerChannelAdapter(name: string, registration: ChannelRegist
   registry.set(name, registration);
 }
 
+/** Register a running adapter under an additional key (alias).
+ *  The same adapter object handles inbound and outbound for multiple
+ *  instance names — useful when a single-server adapter (like CLI) serves
+ *  several named CLI instances. Does NOT call factory or setup again.
+ *  Warns (does not throw) on duplicate key, matching initChannelAdapters. */
+export function registerAdapterAlias(aliasKey: string, adapter: ChannelAdapter): void {
+  if (activeAdapters.has(aliasKey)) {
+    log.warn('Duplicate adapter alias key — overwriting previous adapter', { key: aliasKey });
+  }
+  activeAdapters.set(aliasKey, adapter);
+}
+
 /** Get a live adapter by its EXACT registry key (instance name; default
  *  instances are keyed by channelType itself). No channelType fallback —
  *  callers that address a specific instance (outbound delivery, typing)

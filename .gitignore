@@ -21,6 +21,8 @@ groups/*
 *.keys.json
 .env
 .env*
+deploy/stack.env
+backups/
 
 # Temp files
 .tmp-*

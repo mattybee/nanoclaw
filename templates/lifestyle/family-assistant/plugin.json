@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "family-assistant",
+  "author": { "url": "https://github.com/alipgoldberg" },
+  "version": "1.0.1",
+  "description": "Brisbane household life admin: morning briefs, meals and groceries, week-ahead, bills from email, bookings. No school. Product price-watch belongs to Scout.",
+  "extensions": {
+    "ai.nanoco.nanoclaw": {
+      "agentName": "Life Admin"
+    }
+  }
+}

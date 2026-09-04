@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "scout",
+  "version": "1.0.0",
+  "description": "Australian online researcher for a Brisbane household: deals, shopping, subscriptions, price checks, and new shopping sites. Alias Scout.",
+  "extensions": {
+    "ai.nanoco.nanoclaw": {
+      "agentName": "Researcher"
+    }
+  }
+}

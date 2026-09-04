@@ -122,6 +122,18 @@ describe('spec realization', () => {
     expect(createArgs().join(' ')).toContain('--user 501:1000');
   });
 
+  it('does not pass --userns unless DOCKER_USERNS=host', async () => {
+    await driver().prepare(fixtureSpec());
+    expect(createArgs().join(' ')).not.toContain('--userns');
+  });
+
+  it('passes --userns host when DOCKER_USERNS=host', async () => {
+    vi.stubEnv('DOCKER_USERNS', 'host');
+    await driver().prepare(fixtureSpec());
+    expect(createArgs().join(' ')).toContain('--userns host');
+    vi.unstubAllEnvs();
+  });
+
   it('mounts read-only where the spec says ro, and read-write otherwise', async () => {
     await driver().prepare(fixtureSpec());
     const args = createArgs();

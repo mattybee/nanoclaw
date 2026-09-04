@@ -1,0 +1,126 @@
+# NanoClaw VPS stack: host + OneCLI + postgres.
+# Agent sessions are sibling containers on the VPS Docker daemon (docker.sock),
+# not nested inside this compose project.
+#
+# Load-bearing: NANOCLAW_ROOT must be the same path on the VPS and inside
+# the nanoclaw container. This VPS uses /home/matty/nanoclaw (no sudo for /srv).
+
+name: nanoclaw
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-onecli}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-onecli}
+      POSTGRES_DB: ${POSTGRES_DB:-onecli}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-onecli}"]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 10
+    mem_limit: 192m
+    networks:
+      - onecli
+
+  onecli:
+    image: ghcr.io/onecli/onecli:${ONECLI_VERSION:-1.41.0}
+    container_name: onecli
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${ONECLI_APP_PORT:-10254}:10254"
+      - "127.0.0.1:${ONECLI_GATEWAY_PORT:-10255}:10255"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-onecli}:${POSTGRES_PASSWORD:-onecli}@postgres:5432/${POSTGRES_DB:-onecli}
+      # Leave NEXTAUTH_SECRET unset for single-user local mode (SSH tunnel).
+      # Setting it without GOOGLE_CLIENT_ID/SECRET redirects to oauth-misconfigured.
+      APP_URL: http://127.0.0.1:${ONECLI_APP_PORT:-10254}
+      GATEWAY_API_URL: http://127.0.0.1:${ONECLI_GATEWAY_PORT:-10255}
+      INTERNAL_API_URL: http://localhost:10254
+    volumes:
+      - onecli-data:/app/data
+    mem_limit: 384m
+    networks:
+      - onecli
+
+  nanoclaw:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: nanoclaw-host:local
+    container_name: nanoclaw-host
+    restart: unless-stopped
+    working_dir: ${NANOCLAW_ROOT:-/home/matty/nanoclaw}
+    depends_on:
+      onecli:
+        condition: service_started
+    # This VPS daemon has userns-remap. Bind mounts are host-uid files (matty),
+    # so the host process and every sibling agent must run in the host user ns.
+    userns_mode: "host"
+    user: "${HOST_UID:-1001}:${HOST_GID:-1001}"
+    group_add:
+      - ${DOCKER_GID:-983}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${NANOCLAW_ROOT:-/home/matty/nanoclaw}:${NANOCLAW_ROOT:-/home/matty/nanoclaw}
+    environment:
+      NANOCLAW_ROOT: ${NANOCLAW_ROOT:-/home/matty/nanoclaw}
+      HOME: ${NANOCLAW_ROOT:-/home/matty/nanoclaw}/.home
+      # OneCLI SDK writes CA pems to os.tmpdir(); docker.sock bind-mounts are
+      # resolved on the VPS FS, so tmp must live on the same-path checkout.
+      TMPDIR: ${NANOCLAW_ROOT:-/home/matty/nanoclaw}/.home/tmp
+      TMP: ${NANOCLAW_ROOT:-/home/matty/nanoclaw}/.home/tmp
+      TEMP: ${NANOCLAW_ROOT:-/home/matty/nanoclaw}/.home/tmp
+      TZ: ${TZ:-Australia/Brisbane}
+      NODE_ENV: production
+      ONECLI_URL: http://onecli:10254
+      CONTAINER_IMAGE: ${CONTAINER_IMAGE:-nanoclaw-agent-v2-91157e97:latest}
+      CONTAINER_MEMORY_LIMIT: ${CONTAINER_MEMORY_LIMIT:-400m}
+      CONTAINER_PIDS_LIMIT: ${CONTAINER_PIDS_LIMIT:-512}
+      NANOCLAW_EGRESS_LOCKDOWN: ${NANOCLAW_EGRESS_LOCKDOWN:-true}
+      ONECLI_GATEWAY_CONTAINER: onecli
+      DOCKER_USERNS: ${DOCKER_USERNS:-host}
+    ports:
+      - "127.0.0.1:3100:3100"
+      - "127.0.0.1:3000:3000"
+    mem_limit: 400m
+    networks:
+      - onecli
+
+  nanoclaw-ui:
+    image: nanoclaw-host:local
+    container_name: nanoclaw-ui
+    restart: unless-stopped
+    userns_mode: "host"
+    user: "${HOST_UID:-1001}:${HOST_GID:-1001}"
+    working_dir: ${NANOCLAW_ROOT:-/home/matty/nanoclaw}
+    depends_on:
+      - nanoclaw
+    volumes:
+      - ${NANOCLAW_ROOT:-/home/matty/nanoclaw}:${NANOCLAW_ROOT:-/home/matty/nanoclaw}
+    environment:
+      NANOCLAW_ROOT: ${NANOCLAW_ROOT:-/home/matty/nanoclaw}
+      HOME: ${NANOCLAW_ROOT:-/home/matty/nanoclaw}/.home
+      NANOCLAW_UI_HOST: 0.0.0.0
+      NANOCLAW_UI_PORT: "7799"
+    command: ["node", "tools/ui/server.mjs"]
+    ports:
+      - "127.0.0.1:7799:7799"
+    mem_limit: 96m
+    networks:
+      - onecli
+
+volumes:
+  pgdata:
+  onecli-data:
+
+networks:
+  onecli:
+    driver: bridge

@@ -24,4 +24,8 @@ SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_ROOT"
+# Prefer the compiled client in production images (no tsx / pnpm required).
+if [ -f "$PROJECT_ROOT/dist/cli/client.js" ]; then
+  exec node "$PROJECT_ROOT/dist/cli/client.js" "$@"
+fi
 exec pnpm exec tsx src/cli/client.ts "$@"

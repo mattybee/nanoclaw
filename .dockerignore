@@ -1,0 +1,9 @@
+.git
+data
+groups
+logs
+backups
+node_modules
+container/agent-runner/node_modules
+**/*.tar
+**/*.tar.gz

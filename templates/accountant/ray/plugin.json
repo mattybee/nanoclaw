@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "ray",
+  "version": "1.0.0",
+  "description": "Australian accountant for a high-income IT worker: ATO rules, tax time, Sydney property, super, personal finance.",
+  "extensions": {
+    "ai.nanoco.nanoclaw": {
+      "agentName": "Accountant"
+    }
+  }
+}

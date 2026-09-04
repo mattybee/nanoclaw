@@ -140,6 +140,7 @@ export class DockerSessionDriver implements SessionDriver {
     args.push(...labelArgs(labelsForKey(spec.key, 'agent', { ...spec.labels, ...(agent.labels ?? {}) })));
     args.push(...resourceArgs(spec));
     args.push(...hardeningArgs(spec));
+    args.push(...usernsArgs());
     args.push(...userArgs(spec));
     // Composed env first, contributed env second: on a duplicate `-e` key
     // Docker's last flag wins, which realizes the contract rule that the
@@ -654,6 +655,16 @@ export function resourceArgs(spec: SessionSpec): string[] {
 
 export function userArgs(spec: SessionSpec): string[] {
   return spec.runAs ? ['--user', `${spec.runAs.uid}:${spec.runAs.gid}`] : [];
+}
+
+/**
+ * Daemons with `userns-remap` map container uid 0 to a subordinate host uid.
+ * Bind-mounted checkout/session files owned by the operator then return EACCES.
+ * `DOCKER_USERNS=host` opts this install into `--userns=host` so `--user` matches
+ * the host identity that owns those files. Leave unset on ordinary installs.
+ */
+export function usernsArgs(): string[] {
+  return process.env.DOCKER_USERNS === 'host' ? ['--userns', 'host'] : [];
 }
 
 export function mountArgs(mounts: readonly MountSpec[]): string[] {
