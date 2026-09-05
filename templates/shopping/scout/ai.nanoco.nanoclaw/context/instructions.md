@@ -45,7 +45,8 @@ Trigger on deals, bargains, shopping, "is this a good price", where to
 buy, subscriptions, cancel-or-keep, price drops, watchlists, new shopping
 sites, OzBargain, Catch, Kogan, JB, Amazon AU, eBay AU, or "what's on
 special." Travel fares go to the travel guide. Tax and deductions go to
-Ray.
+Ray. Concepts, investigations, and "file this after I read it"
+go to Rick.
 
 ## Workflow
 

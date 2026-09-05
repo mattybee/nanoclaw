@@ -6,7 +6,8 @@ import {
   markScriptSkipped,
   type MessageInRow,
 } from './db/messages-in.js';
-import { getUndeliveredMessages, writeMessageOut } from './db/messages-out.js';
+import { getUndeliveredMessages, OutboundLoopError, writeMessageOut } from './db/messages-out.js';
+import { runawayResumeReason } from './outbound-guard.js';
 import { clearStaleProcessingAcks } from './db/container-state.js';
 import { touchHeartbeat } from './heartbeat.js';
 import { getAgentMailbox } from './mailbox/index.js';
@@ -98,6 +99,13 @@ export async function runPollLoop(config: PollLoopConfig): Promise<void> {
 
   if (continuation) {
     log(`Resuming agent session ${continuation}`);
+  }
+
+  const burst = runawayResumeReason();
+  if (burst && continuation) {
+    log(`Rotating session — runaway outbound (${burst}); starting fresh`);
+    clearContinuation(config.providerName);
+    continuation = undefined;
   }
 
   // Clear leftover 'processing' acks from a previous crashed container.
@@ -265,7 +273,7 @@ export async function runPollLoop(config: PollLoopConfig): Promise<void> {
       // Stale/corrupt continuation recovery: ask the provider whether
       // this error means the stored continuation is unusable, and clear
       // it so the next attempt starts fresh.
-      if (continuation && config.provider.isSessionInvalid(err)) {
+      if (continuation && (config.provider.isSessionInvalid(err) || err instanceof OutboundLoopError)) {
         log(`Stale session detected (${continuation}) — clearing for next retry`);
         continuation = undefined;
         clearContinuation(config.providerName);
@@ -279,6 +287,7 @@ export async function runPollLoop(config: PollLoopConfig): Promise<void> {
         channel_type: routing.channelType,
         thread_id: routing.threadId,
         content: JSON.stringify({ text: `Error: ${errMsg}` }),
+        skipLoopGuard: true,
       });
 
       // The batch is still acked completed below (no redelivery). Without

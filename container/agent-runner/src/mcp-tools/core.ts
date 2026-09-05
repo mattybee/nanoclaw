@@ -10,7 +10,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { findByName, getAllDestinations } from '../destinations.js';
-import { getMessageIdBySeq, getRoutingBySeq, writeMessageOut } from '../db/messages-out.js';
+import { getMessageIdBySeq, getRoutingBySeq, OutboundLoopError, writeMessageOut } from '../db/messages-out.js';
 import { getCurrentInReplyTo } from '../db/session-state.js';
 import { getSessionRouting } from '../db/session-routing.js';
 import { registerTools } from './server.js';
@@ -93,18 +93,25 @@ export const sendMessage: McpToolDefinition = {
     if ('error' in routing) return err(routing.error);
 
     const id = generateId();
-    const seq = await writeMessageOut({
-      id,
-      in_reply_to: getCurrentInReplyTo(),
-      kind: 'chat',
-      platform_id: routing.platform_id,
-      channel_type: routing.channel_type,
-      thread_id: routing.thread_id,
-      content: JSON.stringify({ text }),
-    });
-
-    log(`send_message: #${seq} → ${routing.resolvedName}`);
-    return ok(`Message sent to ${routing.resolvedName} (id: ${seq})`);
+    try {
+      const seq = await writeMessageOut({
+        id,
+        in_reply_to: getCurrentInReplyTo(),
+        kind: 'chat',
+        platform_id: routing.platform_id,
+        channel_type: routing.channel_type,
+        thread_id: routing.thread_id,
+        content: JSON.stringify({ text }),
+      });
+      log(`send_message: #${seq} → ${routing.resolvedName}`);
+      return ok(`Message sent to ${routing.resolvedName} (id: ${seq})`);
+    } catch (e) {
+      if (e instanceof OutboundLoopError) {
+        log(`send_message blocked: ${e.reason}`);
+        return err(`Blocked: ${e.reason}. Stop sending. Tell the human the loop was cut.`);
+      }
+      throw e;
+    }
   },
 };
 

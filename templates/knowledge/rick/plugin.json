@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "rick",
+  "version": "1.0.0",
+  "description": "Knowledge steward: capture concepts, investigations, and plans; keep a compounding wiki; light work integration. Alias Rick.",
+  "extensions": {
+    "ai.nanoco.nanoclaw": {
+      "agentName": "Rick"
+    }
+  }
+}

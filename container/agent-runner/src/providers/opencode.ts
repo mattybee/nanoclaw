@@ -14,6 +14,7 @@ import { registerProvider } from './provider-registry.js';
 import type { AgentProvider, AgentQuery, ProviderEvent, ProviderOptions, QueryInput } from './types.js';
 import { mcpServersToOpenCodeConfig } from './mcp-to-opencode.js';
 import { getAllDestinations } from '../destinations.js';
+import { runawayResumeReason } from '../outbound-guard.js';
 
 function log(msg: string): void {
   console.error(`[opencode-provider] ${msg}`);
@@ -858,6 +859,10 @@ export class OpenCodeProvider implements AgentProvider {
     return STALE_SESSION_RE.test(msg);
   }
 
+  maybeRotateContinuation(): string | null {
+    return runawayResumeReason();
+  }
+
   query(input: QueryInput): AgentQuery {
     // Same refusal as the Codex provider: the runner registers the shared hook
     // unconditionally before polling, so an unregistered provider means the
@@ -970,10 +975,12 @@ export class OpenCodeProvider implements AgentProvider {
           let lastEventAt = Date.now();
           let eventTimedOut = false;
           const timeoutCheck = setInterval(() => {
+            if (eventTimedOut) return;
             if (Date.now() - lastEventAt > IDLE_TIMEOUT_MS) {
               log(`OpenCode event timeout (${IDLE_TIMEOUT_MS}ms) — clearing session ${turnSessionId}`);
               eventTimedOut = true;
               self.activeSessionId = undefined;
+              aborted = true;
               destroySharedRuntime();
               kick();
             }

@@ -40,6 +40,7 @@ WORKERS=(
   "ray|ag-8993327b-3673-4951-9061-37d8c2fbd2a3|accountant"
   "scout|ag-c7a4d6e8-da16-4792-8691-e91e1cb19e30|scout"
   "kit|ag-82ec9e83-bb7d-49f4-8832-a113e6e36168|kit"
+  "rick|ag-d2d05ab8-a2b8-4978-a70d-a2f4fe3a698d|rick"
 )
 
 # --- Helpers ---

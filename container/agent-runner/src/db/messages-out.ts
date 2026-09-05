@@ -3,8 +3,11 @@
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
 
+import { assertChatOutboundAllowed, OutboundLoopError } from '../outbound-guard.js';
 import { getAgentMailbox } from '../mailbox/index.js';
 import type { OutboundMessage } from '../mailbox/types.js';
+
+export { OutboundLoopError };
 
 export interface MessageOutRow {
   id: string;
@@ -30,6 +33,8 @@ export interface WriteMessageOut {
   channel_type?: string | null;
   thread_id?: string | null;
   content: string;
+  /** Allow the poll-loop error path to report a loop without re-entering the guard. */
+  skipLoopGuard?: boolean;
 }
 
 /**
@@ -92,6 +97,16 @@ function messageRow(message: OutboundMessage): MessageOutRow {
 }
 
 export function writeMessageOut(msg: WriteMessageOut): Promise<number> {
+  if (msg.kind === 'chat' && !msg.skipLoopGuard) {
+    let body = msg.content;
+    try {
+      const parsed = JSON.parse(msg.content) as { text?: unknown };
+      if (typeof parsed.text === 'string') body = parsed.text;
+    } catch {
+      /* use raw content */
+    }
+    assertChatOutboundAllowed(body, msg.channel_type, msg.platform_id);
+  }
   return getAgentMailbox().operations.writeMessageOut({
     id: msg.id,
     inReplyTo: msg.in_reply_to,
