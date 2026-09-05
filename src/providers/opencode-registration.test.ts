@@ -55,4 +55,26 @@ describe('opencode provider host registration', () => {
       fs.rmSync(sessionDir, { recursive: true, force: true });
     }
   });
+
+  it('group model wins over host OPENCODE_MODEL', async () => {
+    const fn = getProviderContainerConfig('opencode');
+    expect(fn).toBeDefined();
+    const sessionDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oc-model-'));
+    try {
+      const contrib = await fn!({
+        sessionDir,
+        agentGroupId: 'ag-test',
+        groupDir: sessionDir,
+        selectedSkills: [],
+        hostEnv: {
+          OPENCODE_PROVIDER: 'openrouter',
+          OPENCODE_MODEL: 'openrouter/qwen/qwen3-coder-30b-a3b-instruct',
+        },
+        model: 'openrouter/anthropic/claude-sonnet-4',
+      });
+      expect(contrib.env?.OPENCODE_MODEL).toBe('openrouter/anthropic/claude-sonnet-4');
+    } finally {
+      fs.rmSync(sessionDir, { recursive: true, force: true });
+    }
+  });
 });

@@ -50,6 +50,8 @@ export interface ProviderContainerContext {
   selectedSkills: string[];
   /** `process.env` at spawn time — pull passthrough values from here. */
   hostEnv: NodeJS.ProcessEnv;
+  /** Per-group model from `container_configs`. OpenCode uses this as OPENCODE_MODEL. */
+  model?: string | null;
 }
 
 export interface ProviderContainerContribution {
