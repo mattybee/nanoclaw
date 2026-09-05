@@ -1,14 +1,16 @@
-# Discord + Cloudflare — what you do
+# Discord — what you do
 
-This is the human checklist. The Discord **adapter is already installed** on the VPS. You create the Discord identity and a stable public HTTPS URL; after that, the host can be wired to **Chief of Staff** only.
+The Discord **adapter is already installed** on the VPS. You create the Discord account, a private server, and a bot. The VPS then talks to Discord over an outbound Gateway. No public URL is required.
 
-Do **not** publish the console (7799), dashboard (3100), or OneCLI (10254). Only the Discord webhook on loopback `:3000` goes through Cloudflare.
+Do **not** publish the console (7799), dashboard (3100), or OneCLI (10254).
 
 ## What you will have at the end
 
-You DM a Discord bot from your phone. Discord POSTs to `https://<your-domain>/webhook/discord`. Cloudflare forwards that to `127.0.0.1:3000` on the VPS. Chief of Staff replies in the same DM.
+You DM the bot from your phone. The VPS keeps a Gateway connection to Discord. Chief of Staff replies in that same DM.
 
-You need: a Discord account, a small Discord server you own, a bot application, a domain on Cloudflare, and a **named** tunnel (not a trycloudflare URL that changes).
+You need: a Discord account, a small Discord server you own, and a bot application.
+
+**You do not need to buy a domain.** Discord’s Gateway is an *outbound* websocket from the VPS. DMs work without Cloudflare, ngrok, or a public hostname. Cloudflare is only useful later if you want slash-command HTTP callbacks.
 
 ---
 
@@ -39,58 +41,22 @@ The bot cannot DM you until you share a server.
 7. Open the generated URL, pick the server from step 2, authorise.
 8. In that server you should see the bot in the member list (offline until the VPS is wired).
 
-Leave the Developer Portal tab open. You will paste an **Interactions Endpoint URL** after Cloudflare has a hostname.
+Leave the **Interactions Endpoint URL** empty. DMs do not use it.
 
 **Send me the Bot Token** (or paste it when we do the VPS step). Do not commit it. Application ID and Public Key are derived from the token; you do not copy those by hand.
 
-## 4. Domain on Cloudflare (you)
+## 4. Cloudflare (optional — skip)
 
-A named tunnel needs a hostname Discord can keep forever.
+Leave the Interactions Endpoint URL empty. Message DMs use the Gateway, not that field.
 
-1. Open https://dash.cloudflare.com and create an account if you do not have one.
-2. Add a domain you control (buy one in Cloudflare, or point an existing domain’s nameservers at Cloudflare and wait until it is **Active**).
-3. Zero Trust is not required. A normal zone is enough.
+If you later want a public HTTPS URL without buying a domain, the free options are a Cloudflare **quick** tunnel (`*.trycloudflare.com`, URL changes on restart) or Tailscale Funnel (`*.ts.net`). Neither is required for phone DMs.
 
-If you do not have a domain yet, buy one first. A random `trycloudflare.com` URL will break the Discord webhook the next time it changes.
+## 5. What happens after the token is in
 
-## 5. Named Cloudflare tunnel (you, then we finish on the VPS)
-
-In the Cloudflare dashboard:
-
-1. **Zero Trust** is optional. The simpler path is **Networks → Tunnels** (or Zero Trust → Networks → Tunnels) → **Create a tunnel** → Cloudflared → name it `nanoclaw`.
-2. Choose **Docker** as the install method if offered. Copy the token (`eyJ…`) — that is the tunnel token, not the Discord token.
-3. Public hostname:
-   - Subdomain: `nc` (or whatever you like)
-   - Domain: your zone from step 4
-   - Service: `http://127.0.0.1:3000`
-4. Save. The public URL will look like `https://nc.yourdomain.com`.
-
-The webhook Discord must call is:
-
-```
-https://nc.yourdomain.com/webhook/discord
-```
-
-(Use your real hostname.) We will run `cloudflared` on the VPS against `127.0.0.1:3000` so nothing else is exposed.
-
-## 6. Point Discord at that URL (you)
-
-Back in https://discord.com/developers/applications → your app → **General Information**:
-
-1. **Interactions Endpoint URL** = `https://nc.yourdomain.com/webhook/discord`
-2. Save. Discord sends a ping; it only succeeds after the VPS has the bot token **and** the tunnel is up. If Save fails with a signature error, wait until we have finished the VPS side and try Save again.
-
-## 7. What I do after that
-
-Once you have the Bot Token and the hostname:
-
-1. Put `DISCORD_BOT_TOKEN` / `DISCORD_APPLICATION_ID` / `DISCORD_PUBLIC_KEY` in the VPS `.env` (ID and public key come from Discord’s API using the token).
-2. Run `cloudflared` on the VPS (Docker, host network or `host.docker.internal`, pointing at `127.0.0.1:3000`).
-3. Restart `nanoclaw-host`.
-4. Wire your Discord DM to **Chief of Staff only**. Workers stay agent-to-agent.
-5. You open a DM with the bot (from the shared server, click the bot → Message) and send a test.
-
-Until step 7 is done, the bot stays grey/offline and DMs do nothing.
+1. `DISCORD_BOT_TOKEN` / `DISCORD_APPLICATION_ID` / `DISCORD_PUBLIC_KEY` go in the VPS `.env`.
+2. `nanoclaw-host` restarts and the Gateway connects (the bot goes online).
+3. Your DM is wired to **Chief of Staff only**.
+4. Open a DM with the bot (server member list → the bot → Message) and talk.
 
 ## Do not
 

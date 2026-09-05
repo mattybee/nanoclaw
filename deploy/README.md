@@ -94,6 +94,7 @@ ssh -t matty@139.180.175.26 'cd /home/matty/nanoclaw && docker compose -f deploy
 
 ```bash
 ssh -N -L 13100:127.0.0.1:3100 -L 17799:127.0.0.1:7799 -L 11254:127.0.0.1:10254 matty@139.180.175.26
+
 ```
 
 Then in a browser:
@@ -183,3 +184,58 @@ Do not start `deploy/compose.yml` on WSL — OneCLI is already running as projec
 - Publish 7799, 3100, or 10254 on `0.0.0.0`.
 - Pass `OPENROUTER_API_KEY` into agent env.
 - Build `./container/build.sh` on this 1 GB VPS.
+
+
+## Google Setup
+
+
+Start here: [https://console.cloud.google.com](https://console.cloud.google.com)
+
+Create or pick a project, then these pages in order:
+
+1. **Enable APIs** — [API Library](https://console.cloud.google.com/apis/library)  
+   Enable **Gmail API** and **Google Calendar API** first.
+
+2. **OAuth consent screen** — [Google Auth Platform](https://console.cloud.google.com/auth/overview)  
+   External is fine. Add **yourself as a Test user** or Google will block the sign-in.
+
+3. **Scopes** — usually **APIs & Services → Data access** (or Auth Platform → Data access)  
+   Gmail: `gmail.readonly`, `gmail.modify`, `gmail.send`  
+   Calendar: `calendar.readonly`, `calendar.events`
+
+4. **OAuth client** — [Credentials / Clients](https://console.cloud.google.com/auth/clients)  
+   **Create client → Web application**.  
+   Paste the **Redirect URL** from the OneCLI Connect screen into **Authorised redirect URIs** exactly as shown.  
+   Copy the **Client ID** and **Client secret** back into OneCLI.
+
+One client covers both Gmail and Calendar. Keep the tunnel open while you authorise.
+
+
+## Slack setup
+
+The Slack adapter is in this checkout and the tests passed. Tokens go on the **VPS**, not here.
+
+Create the Slack app with **Socket Mode** (no public URL):
+
+1. Open [https://api.slack.com/apps](https://api.slack.com/apps) → **Create New App** → from scratch. Name it (e.g. NanoClaw) and pick your workspace.
+2. **OAuth & Permissions** → Bot Token Scopes, add:  
+   `chat:write`, `im:write`, `channels:history`, `groups:history`, `im:history`, `channels:read`, `groups:read`, `mpim:read`, `users:read`, `reactions:write`, `files:read`, `files:write`
+3. **App Home** → enable the **Messages Tab**, and tick **Allow users to send Slash commands and messages from the messages tab**
+4. **Basic Information** → App-Level Tokens → **Generate Token and Scopes** → add `connections:write` → copy the `xapp-` token
+5. **Socket Mode** → enable it
+6. **Event Subscriptions** → enable events, then subscribe to: `message.channels`, `message.groups`, `message.im`, `app_mention` → Save. No Request URL needed.
+7. **Install to Workspace**, then copy the Bot User OAuth Token (`xoxb-`)
+
+When those two tokens are in hand, also copy your Slack member ID (Profile → ⋮ → Copy member ID, starts with `U`).
+
+Do not put them in this WSL `.env`. Next we write them on the VPS, rsync this code, restart `nanoclaw-host`, and wire your Slack DM to Chief of Staff.
+
+Ping me when the app is installed and you have `xoxb-`, `xapp-`, and the member ID.
+
+```bash
+# from slack registration :
+curl -fsSL https://downloads.slack-edge.com/slack-cli/install.sh | bash
+slack login
+slack create --template slack-samples/bolt-js-support-agent --app A0BUZLQUHLK --name "matbot-nanoclaw" --team T0BTMEPLFT4 --environment local
+slack run
+```
