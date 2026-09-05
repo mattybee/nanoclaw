@@ -8,3 +8,5 @@
 
 import './cli.js';
 import './discord.js';
+import './slack.js';
+import './slack-a2a-guard.js';
