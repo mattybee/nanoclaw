@@ -87,7 +87,8 @@ _March 21, 2026_
 ## Quick rules
 
 1. Use `*bold*` not `**bold**`
-2. Use `<url|text>` not `[text](url)`
+2. Use `<url|text>` not `[text](url)`. Percent-encode non-ASCII in the URL
+   (Korean addresses, etc.) — raw Hangul in a link makes Slack drop the message.
 3. Use `•` bullets, avoid numbered lists
 4. Use `:emoji:` shortcodes
 5. Quote blocks with `>`

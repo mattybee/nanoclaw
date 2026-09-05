@@ -65,6 +65,30 @@ Compose services: `nanoclaw-host`, `nanoclaw-ui`, `onecli`, `postgres`. Agent se
 
 ---
 
+## Termux — logs from the phone
+
+Live host logs are **Docker** (`nanoclaw-host`). `logs/nanoclaw.log` on disk is stale under Compose — do not tail that file.
+
+On the phone, once:
+
+```bash
+pkg install openssh
+# reuse a key, or: ssh-keygen -t ed25519
+ssh-copy-id matty@139.180.175.26
+```
+
+Then (`bash -lc` so `~/bin` is on PATH):
+
+```bash
+ssh matty@139.180.175.26 bash -lc nclogs
+ssh matty@139.180.175.26 bash -lc 'nclogs -e'
+ssh matty@139.180.175.26 bash -lc 'nclogs -f'
+```
+
+`nclogs` is read-only (`deploy/nclogs.sh` → `~/bin/nclogs`). No tunnel needed. Optional later: `ssh -L 13100:127.0.0.1:3100` if you want the existing loopback dashboard in a phone browser — do not put 3100 on Cloudflare.
+
+---
+
 ## URLs to check (via SSH tunnel)
 
 Admin planes bind **loopback only**. They have no login. Do not put 7799 / 3100 / 10254 on Cloudflare or `0.0.0.0`.

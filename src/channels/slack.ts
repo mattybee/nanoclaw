@@ -20,6 +20,7 @@ import { readEnvFile } from '../env.js';
 import type { ChannelAdapter, ChannelContextDefaults, ChannelDefaults } from './adapter.js';
 import { createChatSdkBridge } from './chat-sdk-bridge.js';
 import { registerChannelAdapter } from './channel-registry.js';
+import { encodeNonAsciiInUrls } from './slack-outbound-text.js';
 import { extractSlackRawText } from './slack-raw-text.js';
 
 /**
@@ -181,6 +182,7 @@ export function createSlackBridge(options: SlackBridgeOptions = {}): ChannelAdap
     concurrency: 'concurrent',
     supportsThreads: true,
     defaults: SLACK_DEFAULTS,
+    transformOutboundText: encodeNonAsciiInUrls,
   });
   bridge.resolveChannelName = async (platformId: string) => {
     try {
