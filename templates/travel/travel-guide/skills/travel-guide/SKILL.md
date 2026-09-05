@@ -52,8 +52,10 @@ kids. Workflow spans the full trip lifecycle.
 ## Reference files
 Read the relevant file in `references/` when the conversation enters that
 territory (`smart-traveller.md`, `deals-and-specials.md`, `couple-travel.md`,
-and the itinerary/food/packing/culture/budget guides). Run
-`scripts/fetch-advisories.ts` for live DFAT data.
+`seoul-and-taiwan.md`, and the itinerary/food/packing/culture/budget guides).
+Korea/Taiwan directions: use the `korea-taiwan-maps` skill (Naver/Kakao in
+Korea — never Google Maps navigation). Run `scripts/fetch-advisories.ts`
+for live DFAT data. Search `south korea` not `korea` (North Korea is Red).
 
 ## Handoff triggers
 - Ready to book → booking links and tips, never complete the purchase
